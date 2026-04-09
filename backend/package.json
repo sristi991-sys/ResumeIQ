@@ -1,0 +1,32 @@
+{
+  "name": "fairhire-backend",
+  "version": "1.0.0",
+  "description": "AI-powered unbiased hiring backend",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "start": "node server.js"
+  },
+  "keywords": [
+    "ai",
+    "hiring",
+    "backend",
+    "fairness",
+    "hackathon"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.0",
+    "express": "^5.2.1",
+    "groq-sdk": "^1.1.2",
+    "mongoose": "^9.4.1",
+    "multer": "^1.4.5-lts.1",
+    "pdf-parse": "^1.1.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
