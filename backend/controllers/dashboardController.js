@@ -48,11 +48,11 @@ export const getDashboardStats = async (req, res) => {
 
 export const getAllCandidates = async (req, res) => {
   try {
-    const candidates = await Evaluation.find()
-      .sort({ finalScore: -1 }) // 🔥 ranking
-      .select(
-        "candidateId finalScore decision fairnessScore biasAdjusted createdAt"
-      );
+    const Candidate = (await import("../models/candidate.js")).default;
+    
+    const candidates = await Candidate.find()
+      .sort({ createdAt: -1 })
+      .select("name email phone linkedin role atsScore atsDecision status anonId createdAt");
 
     res.status(200).json({
       count: candidates.length,
@@ -60,7 +60,6 @@ export const getAllCandidates = async (req, res) => {
     });
   } catch (error) {
     console.error("🔥 ERROR:", error);
-
     res.status(500).json({
       message: "Failed to fetch candidates",
       error: error.message,

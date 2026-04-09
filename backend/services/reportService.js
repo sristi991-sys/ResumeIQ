@@ -1,24 +1,35 @@
 
 export const buildResumeReport = (evaluation = {}, role = "") => {
-  return {
+  const finalScore = evaluation.scores?.finalScore ?? evaluation.finalScore ?? 75;
+
+  const evalData = {
     role,
-
-    score: evaluation.finalScore ?? 75,
     decision: evaluation.decision ?? "Not Shortlisted",
-
     strengths: evaluation.strengths ?? ["Basic understanding"],
     weaknesses: evaluation.weaknesses ?? ["Needs improvement"],
     improvements: evaluation.improvements ?? ["Work on core concepts"],
-
+    matchedSkills: evaluation.matchedSkills ?? [],
+    missingSkills: evaluation.missingSkills ?? [],
+    experienceLevel: evaluation.experienceLevel ?? "Beginner",
+    scores: {
+      skillMatch: evaluation.scores?.skillMatch ?? 50,
+      experience: evaluation.scores?.experience ?? 50,
+      projects: evaluation.scores?.projects ?? 50,
+      finalScore,
+    },
     bias: {
       biasAdjusted: evaluation.biasAdjusted ?? false,
       fairnessScore: evaluation.fairnessScore ?? 1,
       note: "Evaluation is adjusted to remove bias signals",
     },
-
     explanation:
       evaluation.reason ??
       "Candidate evaluated based on skills, experience, and relevance to role.",
+  };
+
+  return {
+    role,
+    evaluation: evalData,  // CandidatePortal reads data.report.evaluation
   };
 };
 
@@ -35,13 +46,19 @@ export const buildKnowledgeReport = (evaluation = {}) => {
     100
   ).toFixed(0);
 
+  // finalScore as number so CandidatePortal can read qaReport.finalScore
+  const finalScore = Number(overallScore);
+
   return {
     overallScore,
+    finalScore,  // CandidatePortal reads qaReport.finalScore
+    clarity,
+    reasoning,
 
     summary:
-      overallScore > 75
+      finalScore > 75
         ? "Strong understanding of concepts"
-        : overallScore > 50
+        : finalScore > 50
         ? "Moderate understanding with scope for improvement"
         : "Needs significant improvement",
 
@@ -49,7 +66,6 @@ export const buildKnowledgeReport = (evaluation = {}) => {
     weaknesses: evaluation.weaknesses ?? ["Lacks depth"],
     improvements: evaluation.improvements ?? ["Practice more"],
 
-    
     detailedFeedback:
       evaluation.detailedFeedback?.map((item) => ({
         question: item.question,

@@ -1,55 +1,54 @@
-import { groqService } from "./groqService.js";
-import { extractJSON } from "../utils/parser.js";
-import { ROLE_SKILLS } from "../utils/skills.js";
+import { execFile } from "child_process";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import crypto from "crypto";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export const evaluateResume = async (resumeText, role) => {
-  const skills = ROLE_SKILLS[role] || ["General Programming"];
+  return new Promise((resolve, reject) => {
+    // Generate a unique temp file to hold the resume text
+    const tempFileName = `resume_${crypto.randomUUID()}.txt`;
+    const tempFilePath = path.join(__dirname, "../ml", tempFileName);
+    
+    // Write text synchronously (or async, but we await completion)
+    try {
+      fs.writeFileSync(tempFilePath, resumeText, 'utf8');
+    } catch (fsErr) {
+      console.error("Failed to write temp resume file:", fsErr);
+      return reject(fsErr);
+    }
 
-  const prompt = `
-You are a senior FAANG hiring manager.
-
-Your task is to evaluate a candidate's resume for the role: ${role}
-
-========================
-RESUME:
-${resumeText}
-========================
-
-JOB REQUIRED SKILLS:
-${skills.join(", ")}
-
-STRICT RULES:
-- Evaluate ONLY based on skills and experience
-- IGNORE name, gender, college, or background (avoid bias)
-- Be realistic and critical (not overly positive)
-- Output must be structured and professional
-- Provide reasoning based ONLY on resume content
-
-Return ONLY valid JSON in this format:
-
-{
-  "skillsExtracted": [],
-  "matchedSkills": [],
-  "missingSkills": [],
-  "experienceLevel": "Beginner | Intermediate | Advanced",
-
-  "scores": {
-    "skillMatch": number,
-    "experience": number,
-    "projects": number,
-    "finalScore": number
-  },
-
-  "decision": "Selected | Rejected | Borderline",
-
-  "reason": "Detailed explanation of decision",
-
-  "strengths": ["List of strengths based on resume"],
-  "weaknesses": ["List of gaps or missing areas"],
-  "improvements": ["Specific actionable improvements"]
-}
-`;
-
-  const raw = await groqService(prompt);
-  return extractJSON(raw);
+    const pythonScript = path.join(__dirname, "../ml/predict_resume.py");
+    
+    execFile(
+      "python",
+      [pythonScript, tempFilePath, role], // Passing file path instead of full text!
+      { maxBuffer: 1024 * 1024 * 10 },
+      (error, stdout, stderr) => {
+        // ALWAYS clean up the temp file after execution
+        try { fs.unlinkSync(tempFilePath); } catch(e) {}
+        
+        if (error) {
+          console.error("Python script ML error:", error);
+          console.error("stderr:", stderr);
+          return reject(error);
+        }
+        
+        try {
+          const parsed = JSON.parse(stdout.trim());
+          if (parsed.error) {
+            reject(new Error(parsed.error));
+          } else {
+            resolve(parsed);
+          }
+        } catch (e) {
+          console.error("Failed to parse ML JSON output:", stdout);
+          reject(e);
+        }
+      }
+    );
+  });
 };

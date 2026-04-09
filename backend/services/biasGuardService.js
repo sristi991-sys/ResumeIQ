@@ -1,13 +1,8 @@
 export const applyBiasGuard = (evaluation = {}, answers = []) => {
+  // Spread ALL original evaluation fields first, then add bias flags on top
+  // Previously this was stripping scores, decision, matchedSkills etc — fixed!
   return {
-    clarity: evaluation?.clarity ?? 5,
-    relevance: evaluation?.relevance ?? 5,
-    reasoning: evaluation?.reasoning ?? 5,
-
-    strengths: evaluation?.strengths ?? ["Basic understanding"],
-    weaknesses: evaluation?.weaknesses ?? ["Needs depth"],
-    improvements: evaluation?.improvements ?? ["Practice more"],
-
+    ...evaluation,
     biasAdjusted: true,
     fairnessScore: evaluation?.fairnessScore ?? 1,
   };

@@ -26,13 +26,14 @@ export const getQuestions = async (req, res) => {
 
     
     res.status(200).json({
-  message: "Questions generated successfully",
-
-  data: result.questions.map((q, i) => ({
-    id: i + 1,
-    question: q
-  }))
-});
+      message: "Questions generated successfully",
+      data: result.questions.map((q, i) => ({
+        id: i + 1,
+        question: typeof q === "string" ? q : q.question,
+        skill: typeof q === "object" ? (q.skill || "General") : "General",
+        difficulty: typeof q === "object" ? (q.difficulty || "Medium") : "Medium",
+      }))
+    });
 
   } catch (error) {
     console.error("🔥 ERROR:", error);
