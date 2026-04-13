@@ -1,7 +1,5 @@
 import Evaluation from "../models/evaluation.js";
 
-
-
 export const getDashboardStats = async (req, res) => {
   try {
     const total = await Evaluation.countDocuments();
@@ -44,8 +42,6 @@ export const getDashboardStats = async (req, res) => {
   }
 };
 
-
-
 export const getAllCandidates = async (req, res) => {
   try {
     const Candidate = (await import("../models/candidate.js")).default;
@@ -66,8 +62,6 @@ export const getAllCandidates = async (req, res) => {
     });
   }
 };
-
-
 
 export const getCandidateById = async (req, res) => {
   try {
@@ -91,5 +85,38 @@ export const getCandidateById = async (req, res) => {
       message: "Failed to fetch candidate",
       error: error.message,
     });
+  }
+};
+
+export const deleteCandidateById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const Candidate = (await import("../models/candidate.js")).default;
+    
+    // Delete candidate
+    await Candidate.findByIdAndDelete(id);
+    
+    // Also delete associated evaluations
+    await Evaluation.deleteMany({ candidateId: id });
+
+    res.status(200).json({ success: true, message: "Candidate deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export const deleteAllCandidates = async (req, res) => {
+  try {
+    const Candidate = (await import("../models/candidate.js")).default;
+    
+    // Clear all candidates
+    await Candidate.deleteMany({});
+    
+    // Clear all evaluations
+    await Evaluation.deleteMany({});
+
+    res.status(200).json({ success: true, message: "All candidates and evaluations cleared" });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
 };

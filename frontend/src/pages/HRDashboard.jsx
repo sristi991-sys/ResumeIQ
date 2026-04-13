@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
-import { Plus, Trash2, Users, Target, CheckCircle2, AlertCircle, Loader2, BriefcaseBusiness, RefreshCw, Mail, Phone } from 'lucide-react';
+import { Plus, Trash2, Users, Target, CheckCircle2, AlertCircle, Loader2, BriefcaseBusiness, RefreshCw, Mail, Phone, Trash } from 'lucide-react';
 
 export default function HRDashboard() {
   const [roles, setRoles] = useState([]);
@@ -9,6 +9,8 @@ export default function HRDashboard() {
   const [newRole, setNewRole] = useState({ title: '', description: '' });
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState(null);
+  const [deletingCandidate, setDeletingCandidate] = useState(null);
+  const [clearing, setClearing] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [stats, setStats] = useState({ total: '--', selected: '--' });
@@ -70,6 +72,7 @@ export default function HRDashboard() {
   };
 
   const handleDeleteRole = async (title) => {
+    if (!window.confirm(`Are you sure you want to delete the role "${title}"?`)) return;
     setDeleting(title); setError(null);
     try {
       await axios.delete(`http://localhost:5000/api/roles/${encodeURIComponent(title)}`);
@@ -79,6 +82,50 @@ export default function HRDashboard() {
       setError('Failed to delete role.');
     } finally {
       setDeleting(null);
+    }
+  };
+
+  const handleClearRoles = async () => {
+    if (!window.confirm('CRITICAL: Delete ALL open roles? This cannot be undone.')) return;
+    setClearing(true);
+    try {
+      await axios.delete('http://localhost:5000/api/roles');
+      await fetchRoles();
+      showSuccess('🧹 All roles cleared.');
+    } catch (e) {
+      setError('Failed to clear roles.');
+    } finally {
+      setClearing(false);
+    }
+  };
+
+  const handleDeleteCandidate = async (id, name) => {
+    if (!window.confirm(`Delete candidate "${name || 'Anonymous'}" and their evaluations?`)) return;
+    setDeletingCandidate(id);
+    try {
+      await axios.delete(`http://localhost:5000/api/dashboard/candidate/${id}`);
+      await fetchCandidates();
+      await fetchStats();
+      showSuccess('👤 Candidate removed.');
+    } catch (e) {
+      setError('Failed to delete candidate.');
+    } finally {
+      setDeletingCandidate(null);
+    }
+  };
+
+  const handleClearCandidates = async () => {
+    if (!window.confirm('CRITICAL: Wipe ALL candidates and evaluations? Fresh start will begin.')) return;
+    setClearing(true);
+    try {
+      await axios.delete('http://localhost:5000/api/dashboard/candidates');
+      await fetchCandidates();
+      await fetchStats();
+      showSuccess('🧹 Candidate queue cleared for fresh start!');
+    } catch (e) {
+      setError('Failed to clear candidates.');
+    } finally {
+      setClearing(false);
     }
   };
 
@@ -99,10 +146,14 @@ export default function HRDashboard() {
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
       style={{ maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
-      <h1 className="outfit-font" style={{ fontSize: '3rem', marginBottom: '12px' }}>HR Pipeline Console</h1>
-      <p style={{ color: 'var(--text-secondary)', marginBottom: '40px', fontSize: '1.1rem' }}>
-        Manage open roles and monitor candidate pipeline in real time.
-      </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+        <div>
+          <h1 className="outfit-font" style={{ fontSize: '3rem', marginBottom: '8px' }}>HR Pipeline Console</h1>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '40px', fontSize: '1.1rem' }}>
+            Manage open roles and monitor candidate pipeline for a fresh start.
+          </p>
+        </div>
+      </div>
 
       {/* Toasts */}
       {error && (
@@ -139,9 +190,17 @@ export default function HRDashboard() {
 
         {/* Left: Role Management */}
         <div className="glass-panel" style={{ flexShrink: 0, width: '300px', padding: '28px' }}>
-          <h2 className="outfit-font" style={{ fontSize: '1.4rem', marginBottom: '20px', color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <BriefcaseBusiness size={20} /> Open Roles
-          </h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h2 className="outfit-font" style={{ fontSize: '1.4rem', color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
+              <BriefcaseBusiness size={20} /> Roles
+            </h2>
+            {roles.length > 0 && (
+              <button onClick={handleClearRoles} disabled={clearing}
+                style={{ background: 'none', border: 'none', color: 'var(--danger-color)', opacity: 0.6, cursor: 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Trash size={12} /> Clear All
+              </button>
+            )}
+          </div>
           <form onSubmit={handleCreateRole} style={{ marginBottom: '20px' }}>
             <div style={{ display: 'flex', gap: '10px' }}>
               <input type="text" className="input-base" placeholder="e.g. Full Stack Dev"
@@ -154,7 +213,7 @@ export default function HRDashboard() {
           </form>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {roles.length === 0 ? (
-              <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '16px', fontSize: '0.85rem' }}>No active roles yet.</p>
+              <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '16px', fontSize: '0.85rem' }}>No active roles.</p>
             ) : roles.map((r) => (
               <div key={r.title} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.25)', padding: '12px 14px', borderRadius: '10px', borderLeft: '3px solid var(--accent-color)' }}>
                 <span style={{ fontWeight: '500', fontSize: '0.9rem' }}>{r.title}</span>
@@ -173,10 +232,18 @@ export default function HRDashboard() {
             <h2 className="outfit-font" style={{ fontSize: '1.4rem', display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
               <Users size={20} /> Candidate Queue
             </h2>
-            <button onClick={fetchCandidates} disabled={loadingCandidates}
-              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '7px 14px', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem' }}>
-              <RefreshCw size={13} className={loadingCandidates ? 'lucide-spin' : ''} /> Refresh
-            </button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              {candidates.length > 0 && (
+                <button onClick={handleClearCandidates} disabled={clearing}
+                  style={{ background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.3)', borderRadius: '8px', padding: '7px 14px', color: '#fca5a5', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem' }}>
+                  <Trash2 size={13} /> Clear Queue
+                </button>
+              )}
+              <button onClick={fetchCandidates} disabled={loadingCandidates}
+                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '7px 14px', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem' }}>
+                <RefreshCw size={13} className={loadingCandidates ? 'lucide-spin' : ''} /> Refresh
+              </button>
+            </div>
           </div>
 
           {loadingCandidates ? (
@@ -238,11 +305,18 @@ export default function HRDashboard() {
                   }}>{c.atsDecision || 'Pending'}</span>
 
                   {/* Status */}
-                  <span style={{
-                    background: c.status === 'Evaluated' ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.05)',
-                    color: c.status === 'Evaluated' ? 'var(--success-color)' : 'var(--text-secondary)',
-                    padding: '4px 11px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '600'
-                  }}>{c.status || 'Pending'}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{
+                      background: c.status === 'Evaluated' ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.05)',
+                      color: c.status === 'Evaluated' ? 'var(--success-color)' : 'var(--text-secondary)',
+                      padding: '4px 11px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '600'
+                    }}>{c.status || 'Pending'}</span>
+                    
+                    <button onClick={() => handleDeleteCandidate(c._id, c.name)} disabled={deletingCandidate === c._id}
+                      style={{ background: 'none', border: 'none', color: 'var(--danger-color)', opacity: 0.5, cursor: 'pointer', padding: '4px' }}>
+                      {deletingCandidate === c._id ? <Loader2 className="lucide-spin" size={14} /> : <Trash2 size={14} />}
+                    </button>
+                  </div>
                 </motion.div>
               ))}
             </div>

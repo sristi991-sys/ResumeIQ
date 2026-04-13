@@ -1,11 +1,12 @@
 import express from "express";
-import { getRoles, createRole, deleteRole } from "../controllers/roleController.js";
+import { getRoles, createRole, deleteRole, deleteAllRoles } from "../controllers/roleController.js";
 
 const router = express.Router();
 
 router.route("/")
   .get(getRoles)
-  .post(createRole);
+  .post(createRole)
+  .delete(deleteAllRoles); // Add bulk delete
 
 router.route("/:title")
   .delete(deleteRole);

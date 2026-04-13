@@ -32,3 +32,12 @@ export const deleteRole = async (req, res) => {
         res.status(500).json({ success: false, error: err.message });
     }
 };
+
+export const deleteAllRoles = async (req, res) => {
+    try {
+        await Role.deleteMany({});
+        res.status(200).json({ success: true, message: "All roles cleared" });
+    } catch(err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+};
